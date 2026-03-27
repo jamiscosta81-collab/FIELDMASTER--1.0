@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FieldMaster • 2026</title>
+<script src="https://unpkg.com/dexie@3.2.4/dist/dexie.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;900&family=Barlow:wght@400;500;600&display=swap');
+:root { --bg:#070c1a; --accent:#00aaff; --accent2:#00ffcc; --text:#c8d8f0; --card:#0f1a2e; --border:#1e3050; }
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:var(--bg); color:var(--text); font-family:'Barlow',sans-serif; min-height:100dvh; }
+.header { background:linear-gradient(135deg,#070c1a,#0d1528); padding:14px 16px; display:flex; align-items:center; gap:12px; border-bottom:1px solid #1e3050; position:sticky; top:0; z-index:100; }
+.header-logo { font-family:'Barlow Condensed',sans-serif; font-size:28px; font-weight:900; letter-spacing:4px; background:linear-gradient(90deg,#00aaff,#00ffcc); -webkit-background-clip:text; color:transparent; }
+.tabs { display:flex; overflow-x:auto; background:#0d1528; border-bottom:1px solid #1e3050; padding:8px 0; gap:6px; }
+.tab { padding:12px 20px; font-weight:700; font-size:13px; letter-spacing:1.5px; text-transform:uppercase; white-space:nowrap; border-bottom:3px solid transparent; transition:all 0.3s; }
+.tab.active { color:var(--accent); border-bottom-color:var(--accent); }
+.page { display:none; padding:20px 16px 80px; }
+.page.active { display:block; }
+.card { background:var(--card); border:1px solid var(--border); border-radius:12px; margin-bottom:16px; padding:16px; }
+.table { width:100%; border-collapse:collapse; font-size:13px; }
+.table td, .table th { border:1px solid #1e3050; padding:8px; text-align:left; }
+.table th { background:#0d1528; color:var(--accent2); }
+.input-cell { width:100%; background:transparent; border:none; color:var(--text); font-size:13px; }
+.input-cell:focus { outline:none; background:#1e3050; border-radius:4px; }
+.submenu { cursor:pointer; padding:10px; background:#1e3050; border-radius:8px; margin-bottom:8px; font-weight:700; }
+.submenu-content { display:none; padding:12px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-logo">FIELD<span>MASTER</span></div>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="showPage('home')">🏠 Início</button>
+  <button class="tab" onclick="showPage('equip')">📸 Equipamentos</button>
+  <button class="tab" onclick="showPage('manuais')">📖 Manuais</button>
+  <button class="tab" onclick="showPage('diagnostico')">🔍 Diagnóstico IA</button>
+  <button class="tab" onclick="showPage('backup')">💾 Backup</button>
+  <button class="tab" onclick="showPage('glossario')">📖 Glossário</button>
+  <button class="tab" onclick="showAdminTab()">🔐 Admin</button>
+</div>
+
+<!-- ABA BACKUP - RÉPLICA DO HANDHELD -->
+<div class="page active" id="page-backup">
+  <h2 style="color:#00ffcc;margin-bottom:16px">💾 Backup Peak 150 - Handheld Replica</h2>
+  
+  <div style="display:flex;gap:8px;margin-bottom:16px">
+    <button onclick="setMode('configure')" id="btn-configure" style="flex:1;padding:12px;background:#00aaff;color:#000;border-radius:8px;font-weight:700">Configure Mode</button>
+    <button onclick="setMode('service')" id="btn-service" style="flex:1;padding:12px;background:#1e3050;color:#fff;border-radius:8px;font-weight:700">Service Mode</button>
+  </div>
+
+  <!-- CONFIGURE MODE -->
+  <div id="configure-mode">
+    <div class="submenu" onclick="toggleSub(this)">SPEED CONFIG</div>
+    <div class="submenu-content">
+      <table class="table"><tr><th>Parâmetro</th><th>Valor</th></tr>
+      <tr><td>ROTAÇÃO NOMINAL</td><td><input class="input-cell" value="OK"></td></tr>
+      <tr><td>MPU #1 Max Hz</td><td><input class="input-cell" value="5333.00"></td></tr>
+      <tr><td>Max Speed Level</td><td><input class="input-cell" value="5333.00"></td></tr>
+      <tr><td>Minimum Speed Level</td><td><input class="input-cell" value="50.00"></td></tr>
+    </table>
+    </div>
+
+    <div class="submenu" onclick="toggleSub(this)">START MODE</div>
+    <div class="submenu-content">
+      <table class="table"><tr><th>Parâmetro</th><th>Valor</th></tr>
+      <tr><td>Manual Start Mode?</td><td><select class="input-cell"><option>FALSE</option><option>TRUE</option></select></td></tr>
+    </table>
+    </div>
+
+    <div class="submenu" onclick="toggleSub(this)">ACTUATOR CONFIG</div>
+    <div class="submenu-content">
+      <table class="table"><tr><th>Parâmetro</th><th>Valor</th></tr>
+      <tr><td>Use 20-160 mA Actuator?</td><td><select class="input-cell"><option>FALSE</option><option>TRUE</option></select></td></tr>
+      <tr><td>Use 4-20 mA Actuator?</td><td><select class="input-cell"><option>TRUE</option><option>FALSE</option></select></td></tr>
+    </table>
+    </div>
+  </div>
+
+  <!-- SERVICE MODE -->
+  <div id="service-mode" style="display:none">
+    <div class="submenu" onclick="toggleSub(this)">ALARMS</div>
+    <div class="submenu-content">
+      <table class="table"><tr><th>Alarme</th><th>Status</th></tr>
+      <tr><td>MPU #1 Failure</td><td><select class="input-cell"><option>FALSE</option><option>TRUE</option></select></td></tr>
+      <tr><td>Remote Input Failure</td><td><select class="input-cell"><option>FALSE</option><option>TRUE</option></select></td></tr>
+    </table>
+    </div>
+
+    <div class="submenu" onclick="toggleSub(this)">TRIPS</div>
+    <div class="submenu-content">
+      <table class="table"><tr><th>Trip</th><th>Status</th></tr>
+      <tr><td>OverSpeed Trip</td><td><select class="input-cell"><option>TRUE</option><option>FALSE</option></select></td></tr>
+      <tr><td>Loss of Both MPUs</td><td><select class="input-cell"><option>FALSE</option><option>TRUE</option></select></td></tr>
+    </table>
+    </div>
+
+    <div class="submenu" onclick="toggleSub(this)">SPEED DYNAMICS</div>
+    <div class="submenu-content">
+      <table class="table"><tr><th>Parâmetro</th><th>Valor</th></tr>
+      <tr><td>Low Speed Gain</td><td><input class="input-cell" value="1.12"></td></tr>
+      <tr><td>High Speed Gain</td><td><input class="input-cell" value="1.12"></td></tr>
+    </table>
+    </div>
+
+    <!-- Mais submenus podem ser adicionados aqui conforme necessário -->
+  </div>
+</div>
+
+<script>
+// ==================== FUNÇÕES GLOBAIS ====================
+window.showPage = function(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  const page = document.getElementById('page-' + id);
+  if (page) page.classList.add('active');
+};
+
+window.showAdminTab = function() {
+  const senha = prompt("🔐 Digite a senha de Administrador:");
+  if (senha !== "1234") return alert("❌ Senha incorreta!");
+  showPage('admin');
+};
+
+function toggleSub(el) {
+  const content = el.nextElementSibling;
+  content.style.display = content.style.display === 'block' ? 'none' : 'block';
+}
+
+function setMode(mode) {
+  document.getElementById('configure-mode').style.display = mode === 'configure' ? 'block' : 'none';
+  document.getElementById('service-mode').style.display = mode === 'service' ? 'block' : 'none';
+  document.getElementById('btn-configure').style.background = mode === 'configure' ? '#00aaff' : '#1e3050';
+  document.getElementById('btn-service').style.background = mode === 'service' ? '#00aaff' : '#1e3050';
+}
+
+// Inicialização
+setMode('configure'); // Começa no Configure Mode
+</script>
+</body>
+</html>
