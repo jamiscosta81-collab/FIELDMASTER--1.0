@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FieldMaster • 2026</title>
+<script src="https://unpkg.com/dexie@3.2.4/dist/dexie.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+body { font-family:Arial,sans-serif; background:#070c1a; color:#fff; margin:0; padding:0; }
+.header { background:#111; padding:20px; text-align:center; font-size:28px; font-weight:bold; color:#00ffcc; }
+.tabs { display:flex; background:#0d1528; padding:10px; gap:10px; }
+.tab { padding:14px 24px; background:#1e3050; border:none; color:#fff; font-weight:700; border-radius:8px; }
+.tab.active { background:#00ffcc; color:#000; }
+.page { display:none; padding:20px; }
+.page.active { display:block; }
+.card { background:#16213e; padding:20px; margin:15px 0; border-radius:12px; }
+button { width:100%; padding:18px; background:#00ffcc; color:#000; font-weight:900; border:none; border-radius:12px; margin-top:20px; }
+</style>
+</head>
+<body>
+
+<div class="header">FIELDMASTER • 2026</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="showPage('backup')">💾 BACKUP</button>
+  <button class="tab" onclick="showPage('admin')">🔐 ADMIN</button>
+</div>
+
+<!-- BACKUP -->
+<div class="page active" id="page-backup">
+  <h2 style="color:#00ffcc">Backup Peak 150</h2>
+  <input id="tecnicoNome" placeholder="Nome do Técnico" style="width:100%;padding:16px;background:#0f1a2e;border:2px solid #00ffcc;border-radius:12px;color:#fff;font-size:16px">
+  
+  <button id="btnSalvar">💾 SALVAR E ENVIAR PARA O TÉCNICO</button>
+</div>
+
+<!-- ADMIN -->
+<div class="page" id="page-admin">
+  <h2 style="color:#00ffcc">🔐 Admin - Relatórios Recebidos</h2>
+  <div id="admin-list"></div>
+</div>
+
+<script>
+// BANCO DE DADOS
+const db = new Dexie('FieldMasterDB');
+db.version(1).stores({ backups: '++id, timestamp, tecnico' });
+
+// NAVEGAÇÃO
+window.showPage = function(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  if (page === 'admin') carregarAdmin();
+};
+
+// SALVAR - USANDO addEventListener (mais confiável)
+document.getElementById('btnSalvar').addEventListener('click', async function() {
+  console.log("✅ Botão SALVAR clicado!");   // ← veja isso no console (F12)
+
+  const tecnico = document.getElementById('tecnicoNome').value.trim();
+  if (!tecnico) {
+    alert("Digite o nome do técnico!");
+    return;
+  }
+
+  await db.backends.add({
+    timestamp: Date.now(),
+    tecnico: tecnico
+  });
+
+  alert(`✅ Salvo e enviado!\nTécnico: ${tecnico}`);
+  document.getElementById('tecnicoNome').value = "";
+
+  carregarAdmin();   // atualiza Admin imediatamente
+});
+
+// CARREGAR ADMIN
+async function carregarAdmin() {
+  const container = document.getElementById('admin-list');
+  container.innerHTML = '';
+
+  const backups = await db.backends.orderBy('timestamp').reverse().toArray();
+
+  if (backups.length === 0) {
+    container.innerHTML = '<div class="card" style="text-align:center;color:#7a9bc0">Nenhum relatório ainda.<br>Salve na aba Backup.</div>';
+    return;
+  }
+
+  backups.forEach(b => {
+    const div = document.createElement('div');
+    div.className = 'card';
+    div.innerHTML = `
+      <strong>${b.tecnico}</strong><br>
+      ${new Date(b.timestamp).toLocaleString('pt-BR')}
+      <button onclick="baixarPDF(${b.id})" style="margin-top:10px">📄 Baixar PDF</button>
+    `;
+    container.appendChild(div);
+  });
+}
+
+window.baixarPDF = function(id) {
+  alert("PDF baixado (ID: " + id + ")");
+};
+
+// INICIALIZAÇÃO
+carregarAdmin();
+console.log("✅ App carregado - teste o botão Salvar agora");
+</script>
+</body>
+</html>
